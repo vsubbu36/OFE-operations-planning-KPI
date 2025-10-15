@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>KPI Dashboard — Order Booking / Completion / Pending</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Leaflet for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root{
+      --bg: #0f1724;
+      --card: #0b1220;
+      --muted: #94a3b8;
+      --accent: #06b6d4;
+      --accent-2: #60a5fa;
+      color-scheme: dark;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      background: linear-gradient(180deg,#071028 0%, #071624 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+    }
+    .container{
+      max-width:1200px;
+      margin:20px auto;
+      padding:18px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:18px;
+    }
+
+    /* Top KPI row */
+    .kpi-row{
+      display:flex;
+      gap:12px;
+      align-items:stretch;
+      justify-content:space-between;
+    }
+    .kpi{
+      flex:1;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.03);
+      padding:16px;
+      border-radius:10px;
+      box-shadow: 0 4px 18px rgba(2,6,23,0.6);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .kpi h3{
+      margin:0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+    }
+    .kpi .value{
+      font-size:32px;
+      font-weight:700;
+      color:#fff;
+    }
+    .kpi .sub{ color:var(--muted); font-size:13px; }
+
+    /* Chart grid */
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(2,1fr);
+      gap:18px;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;
+      padding:12px;
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 6px 22px rgba(2,6,23,0.6);
+    }
+    .card h4{ margin:0 0 8px 0; font-size:15px; color:var(--muted);}
+
+    /* map size */
+    #map{ height:360px; border-radius:8px; overflow:hidden; }
+
+    /* responsive */
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+      .kpi-row{ flex-direction:column; }
+    }
+
+    footer{
+      color:var(--muted);
+      font-size:13px;
+      text-align:center;
+      margin-top:6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="kpi-row">
+      <div class="kpi">
+        <h3>Order booking</h3>
+        <div class="value" id="kpi-booking">186</div>
+        <div class="sub">Total orders booked</div>
+      </div>
+
+      <div class="kpi">
+        <h3>Completion</h3>
+        <div class="value" id="kpi-completion">124</div>
+        <div class="sub">Total completed</div>
+      </div>
+
+      <div class="kpi">
+        <h3>Pending / Potential</h3>
+        <div class="value" id="kpi-pending">62</div>
+        <div class="sub">Remaining to match</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h4>Monthwise turnover completion</h4>
+        <canvas id="completionChart" height="140"></canvas>
+      </div>
+
+      <div class="card">
+        <h4>Monthwise order booking</h4>
+        <canvas id="bookingChart" height="140"></canvas>
+      </div>
+
+      <div class="card">
+        <h4>Region-wise order booking (map)</h4>
+        <div id="map"></div>
+      </div>
+
+      <div class="card">
+        <h4>Pending order breakup (pie)</h4>
+        <canvas id="pendingPie" height="220"></canvas>
+      </div>
+
+      <div class="card" style="grid-column:1 / -1;">
+        <h4>C&F, Subcontracting, and Shop matching (grouped bar)</h4>
+        <canvas id="matchingBar" height="120"></canvas>
+      </div>
+    </div>
+
+    <footer>
+      Generated from provided KPI data — interactive charts (Chart.js) and map (Leaflet). Hover charts for details.
+    </footer>
+  </div>
+
+  <script>
+    // ---------- Data from the user (hard-coded) ----------
+    const kpi = {
+      booking: 186,
+      completion: 124,
+      pending: 62
+    };
+
+    const months = ["Apr'25","May'25","Jun'25","Jul'25","Aug'25","Sep'25","Oct'25"];
+    const turnoverCompletion = [20,20,20,20,20,20,4]; // "Turnover completion"
+    const orderBooking =       [20,20,30,50,20,20,4]; // "Order booking"
+
+    // Region-wise order booking (value)
+    // Approx lat/lon used for display
+    const regions = [
+      {name:'Mumbai', value:10, lat:19.0760, lon:72.8777},
+      {name:'Mehsana', value:20, lat:23.5959, lon:72.3984},
+      {name:'Rajamundry', value:30, lat:16.9891, lon:81.7898},
+      {name:'Dehradun', value:40, lat:30.3165, lon:78.0322},
+      {name:'Cambay (Khambhat)', value:50, lat:22.3450, lon:72.6099}
+    ];
+
+    // Pending order breakup
+    const pendingBreakup = [
+      {label:'XMT', value:10},
+      {label:'2CP', value:10},
+      {label:'3CP', value:10},
+      {label:'4CP', value:10},
+      {label:'TSU', value:10},
+      {label:'CSU', value:20},
+      {label:'Spares', value:1}
+    ];
+
+    // C&F overall matching breakup
+    // Using columns: List Value, CF matching, CF to match (list taken from table)
+    const cfList = [
+      {cat:'Opening match', list:38.34, match:38.34, toMatch:0},
+      {cat:'LIST-1', list:23, match:22, toMatch:1},
+      {cat:'LIST-2', list:35, match:35, toMatch:0},
+      {cat:'LIST-3', list:37, match:33, toMatch:4},
+      {cat:'LIST-4 (OIL)', list:9, match:1.6, toMatch:7.4},
+      {cat:'LIST5', list:44, match:32, toMatch:12}
+    ];
+
+    // Subcontracting matching breakup
+    // columns: List Value, SC matching, SC to match
+    const scList = [
+      {cat:'Opening match', list:10, match:10, toMatch:0},
+      {cat:'LIST-1', list:50, match:50, toMatch:0},
+      {cat:'LIST-2', list:40, match:40, toMatch:0},
+      {cat:'LIST-3', list:33, match:30, toMatch:3},
+      {cat:'LIST-4 (OIL)', list:9, match:0, toMatch:9},
+      {cat:'LIST5', list:44, match:2, toMatch:42}
+    ];
+
+    // Shop completion (single row)
+    const shop = {target:186, completion:123.92, balance:62.08};
+
+    // ---------- Populate top KPI values ----------
+    document.getElementById('kpi-booking').textContent = kpi.booking;
+    document.getElementById('kpi-completion').textContent = kpi.completion;
+    document.getElementById('kpi-pending').textContent = kpi.pending;
+
+    // ---------- Chart: monthwise completion (area/line) ----------
+    const completionCtx = document.getElementById('completionChart').getContext('2d');
+    const completionChart = new Chart(completionCtx, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets:[
+          {
+            label: 'Turnover completion',
+            data: turnoverCompletion,
+            borderColor: 'rgba(96,165,250,1)',
+            backgroundColor: createGradient(completionCtx, 'rgba(96,165,250,0.35)', 'rgba(96,165,250,0.02)'),
+            tension: 0.3,
+            fill: true,
+            pointRadius:4,
+            pointBackgroundColor:'#60a5fa'
+          }
+        ]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ mode:'index', intersect:false }
+        },
+        scales:{
+          x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1' } },
+          y:{ ticks:{ color:'#cbd5e1' }, beginAtZero:true }
+        }
+      }
+    });
+
+    // ---------- Chart: monthwise order booking (area/line) ----------
+    const bookingCtx = document.getElementById('bookingChart').getContext('2d');
+    const bookingChart = new Chart(bookingCtx, {
+      type: 'line',
+      data:{
+        labels: months,
+        datasets:[
+          {
+            label:'Order booking',
+            data: orderBooking,
+            borderColor: 'rgba(6,182,212,1)',
+            backgroundColor: createGradient(bookingCtx, 'rgba(6,182,212,0.35)', 'rgba(6,182,212,0.02)'),
+            tension:0.3,
+            fill:true,
+            pointRadius:4,
+            pointBackgroundColor:'#06b6d4'
+          }
+        ]
+      },
+      options:{
+        responsive:true,
+        plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } },
+        scales:{
+          x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1'} },
+          y:{ ticks:{ color:'#cbd5e1' }, beginAtZero:true }
+        }
+      }
+    });
+
+    // helper gradient creator
+    function createGradient(ctx, topColor, bottomColor){
+      const canvas = ctx.canvas;
+      const g = ctx.createLinearGradient(0,0,0,canvas.height);
+      g.addColorStop(0, topColor);
+      g.addColorStop(1, bottomColor);
+      return g;
+    }
+
+    // ---------- Map: region-wise order booking ----------
+    const map = L.map('map', { zoomControl:true, scrollWheelZoom:false }).setView([22.0,78.0], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add circle markers sized by value
+    const maxVal = Math.max(...regions.map(r=>r.value));
+    regions.forEach(r=>{
+      const radius = 12 + (r.value / maxVal) * 30; // visual sizing
+      const circle = L.circleMarker([r.lat,r.lon], {
+        radius,
+        fillColor: '#06b6d4',
+        color: '#0b1220',
+        weight: 1,
+        opacity: 0.9,
+        fillOpacity: 0.85
+      }).addTo(map);
+
+      circle.bindPopup(`<strong>${r.name}</strong><br/>Order booking: <b>${r.value}</b>`);
+      // add label permanently using a small custom div icon
+      const label = L.divIcon({
+        className: 'region-label',
+        html: `<div style="background:rgba(2,6,23,0.75);padding:4px 6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);font-size:12px;color:#e6eef8">${r.name}: ${r.value}</div>`
+      });
+      L.marker([r.lat + 0.15, r.lon], {icon: label, interactive:false}).addTo(map);
+    });
+
+    // ---------- Pie chart: pending order breakup ----------
+    const pendingCtx = document.getElementById('pendingPie').getContext('2d');
+    const pendingLabels = pendingBreakup.map(p => p.label);
+    const pendingValues = pendingBreakup.map(p => p.value);
+    const pendingColors = [
+      '#60a5fa','#06b6d4','#7c3aed','#f97316','#ef4444','#10b981','#fbbf24'
+    ];
+    const pendingPie = new Chart(pendingCtx, {
+      type:'pie',
+      data:{
+        labels: pendingLabels,
+        datasets:[{
+          data: pendingValues,
+          backgroundColor: pendingColors,
+          borderColor: '#071224',
+          borderWidth: 1
+        }]
+      },
+      options:{
+        plugins:{
+          legend:{ position:'right', labels:{ color:'#cbd5e1' } },
+          tooltip:{ callbacks:{
+            label: function(context){
+              const v = context.raw;
+              const total = pendingValues.reduce((a,b)=>a+b,0);
+              const pct = ((v/total)*100).toFixed(1);
+              return `${context.label}: ${v} (${pct}%)`;
+            }
+          }}
+        }
+      }
+    });
+
+    // ---------- Bar chart: C&F, Subcontracting, Shop matching ----------
+    const barCtx = document.getElementById('matchingBar').getContext('2d');
+
+    // for grouped bars, align categories. We'll use categories from CF and SC, plus "Shop"
+    const categories = Array.from(new Set([...cfList.map(x=>x.cat), ...scList.map(x=>x.cat)]));
+    categories.push('Shop completion');
+
+    const cfListValue = categories.map(cat => {
+      const item = cfList.find(x=>x.cat===cat);
+      return item ? item.list : 0;
+    });
+    const cfMatch = categories.map(cat => {
+      const item = cfList.find(x=>x.cat===cat);
+      return item ? item.match : 0;
+    });
+    const cfToMatch = categories.map(cat => {
+      const item = cfList.find(x=>x.cat===cat);
+      return item ? item.toMatch : 0;
+    });
+
+    const scListValue = categories.map(cat => {
+      const item = scList.find(x=>x.cat===cat);
+      return item ? item.list : 0;
+    });
+    const scMatch = categories.map(cat => {
+      const item = scList.find(x=>x.cat===cat);
+      return item ? item.match : 0;
+    });
+    const scToMatch = categories.map(cat => {
+      const item = scList.find(x=>x.cat===cat);
+      return item ? item.toMatch : 0;
+    });
+
+    // Add shop values at the "Shop completion" category index
+    const shopIndex = categories.indexOf('Shop completion');
+    // For clarity, create "Shop target / completion / balance" arrays in parallel length
+    const shopTarget = new Array(categories.length).fill(0);
+    const shopCompletion = new Array(categories.length).fill(0);
+    const shopBalance = new Array(categories.length).fill(0);
+    shopTarget[shopIndex] = shop.target;
+    shopCompletion[shopIndex] = shop.completion;
+    shopBalance[shopIndex] = shop.balance;
+
+    // We'll show grouped bars for: CF List vs CF Match vs CF toMatch (for CF categories)
+    // and SC List vs SC Match vs SC toMatch (for SC categories). For simplicity combine as pairs
+    // We'll present 6 datasets: CF list, CF match, CF toMatch, SC list, SC match, SC toMatch and Shop target/completion/balance.
+    const matchingBar = new Chart(barCtx, {
+      type:'bar',
+      data:{
+        labels: categories,
+        datasets: [
+          { label:'CF List', data: cfListValue, backgroundColor: 'rgba(96,165,250,0.85)' },
+          { label:'CF Match', data: cfMatch, backgroundColor: 'rgba(96,165,250,0.38)' },
+          { label:'CF To Match', data: cfToMatch, backgroundColor: 'rgba(96,165,250,0.18)' },
+
+          { label:'SC List', data: scListValue, backgroundColor: 'rgba(6,182,212,0.85)' },
+          { label:'SC Match', data: scMatch, backgroundColor: 'rgba(6,182,212,0.38)' },
+          { label:'SC To Match', data: scToMatch, backgroundColor: 'rgba(6,182,212,0.18)' },
+
+          { label:'Shop Target', data: shopTarget, backgroundColor: '#10b981' },
+          { label:'Shop Completion', data: shopCompletion, backgroundColor: '#34d399' },
+          { label:'Shop Balance', data: shopBalance, backgroundColor: '#065f46' }
+        ]
+      },
+      options:{
+        plugins:{
+          tooltip:{ mode:'index', intersect:false },
+          legend:{ position:'bottom', labels:{ color:'#cbd5e1' } }
+        },
+        responsive:true,
+        scales:{
+          x:{ stacked:false, ticks:{ color:'#cbd5e1' } },
+          y:{ beginAtZero:true, ticks:{ color:'#cbd5e1' } }
+        }
+      }
+    });
+
+    // Make charts resize nicely
+    window.addEventListener('resize', ()=>{
+      completionChart.resize();
+      bookingChart.resize();
+      pendingPie.resize();
+      matchingBar.resize();
+    });
+
+  </script>
+</body>
+</html>
