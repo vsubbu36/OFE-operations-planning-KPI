@@ -2,437 +2,436 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>KPI Dashboard — Order Booking / Completion / Pending</title>
+  <title>OFE Performance KPI Dashboard (2022–2026)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Leaflet for map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+  <!-- Plotly CDN -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     :root{
-      --bg: #0f1724;
-      --card: #0b1220;
-      --muted: #94a3b8;
-      --accent: #06b6d4;
-      --accent-2: #60a5fa;
-      color-scheme: dark;
+      --teal:#00797d;
+      --teal-strong:#006b6d;
+      --bg:#ffffff;
+      --muted:#6b7c7c;
+      --card-shadow: 0 6px 16px rgba(0,0,0,0.06);
+      --card-radius:8px;
+      --max-width:1200px;
     }
-    html,body{
-      height:100%;
-      margin:0;
-      background: linear-gradient(180deg,#071028 0%, #071624 100%);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color:#e6eef8;
-      -webkit-font-smoothing:antialiased;
-    }
-    .container{
-      max-width:1200px;
-      margin:20px auto;
-      padding:18px;
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:18px;
-    }
-
-    /* Top KPI row */
-    .kpi-row{
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f6fbfb;
+      margin: 16px;
+      color: #123;
       display:flex;
-      gap:12px;
-      align-items:stretch;
+      justify-content:center;
+    }
+    .container {
+      width:100%;
+      max-width: var(--max-width);
+    }
+    header {
+      display:flex;
       justify-content:space-between;
+      align-items:baseline;
+      gap:12px;
+      margin-bottom:12px;
     }
-    .kpi{
-      flex:1;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border:1px solid rgba(255,255,255,0.03);
-      padding:16px;
-      border-radius:10px;
-      box-shadow: 0 4px 18px rgba(2,6,23,0.6);
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .kpi h3{
+    h1 {
       margin:0;
-      font-size:14px;
-      color:var(--muted);
-      font-weight:600;
+      color:var(--teal-strong);
+      font-size:20px;
+      letter-spacing:0.2px;
     }
-    .kpi .value{
-      font-size:32px;
-      font-weight:700;
-      color:#fff;
-    }
-    .kpi .sub{ color:var(--muted); font-size:13px; }
-
-    /* Chart grid */
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(2,1fr);
-      gap:18px;
-    }
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius:12px;
-      padding:12px;
-      border:1px solid rgba(255,255,255,0.03);
-      box-shadow: 0 6px 22px rgba(2,6,23,0.6);
-    }
-    .card h4{ margin:0 0 8px 0; font-size:15px; color:var(--muted);}
-
-    /* map size */
-    #map{ height:360px; border-radius:8px; overflow:hidden; }
-
-    /* responsive */
-    @media (max-width: 900px){
-      .grid{ grid-template-columns: 1fr; }
-      .kpi-row{ flex-direction:column; }
-    }
-
-    footer{
+    .meta {
       color:var(--muted);
       font-size:13px;
-      text-align:center;
-      margin-top:6px;
+    }
+    .kpi-row {
+      display:flex;
+      gap:12px;
+      margin:12px 0 18px 0;
+      flex-wrap:wrap;
+    }
+    .kpi {
+      background:var(--bg);
+      padding:14px;
+      border-radius:var(--card-radius);
+      box-shadow:var(--card-shadow);
+      min-width:170px;
+      flex:1 1 200px;
+    }
+    .kpi .label { color:var(--muted); font-size:12px; margin-bottom:6px; }
+    .kpi .value { font-size:20px; font-weight:700; color:var(--teal-strong); }
+    .kpi .small { font-size:12px; color:var(--muted); margin-top:6px; }
+
+    .grid {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    .card {
+      background:var(--bg);
+      padding:12px;
+      border-radius:var(--card-radius);
+      box-shadow:var(--card-shadow);
+    }
+    .card h3 { margin:0 0 8px 0; color:var(--teal-strong); font-size:15px; }
+    .chart { width:100%; height:360px; }
+    .table-wrap { margin-top:8px; max-height:160px; overflow:auto; border-top:1px solid #eef6f6; padding-top:8px; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:6px 8px; text-align:left; border-bottom:1px solid #f2f7f7; }
+    th{ background:#f9fdfd; color:var(--muted); font-weight:600; font-size:12px; }
+    .fullwidth { grid-column: 1 / -1; }
+    .insight { margin-top:10px; color: #2b4; font-size:13px; }
+    footer { margin-top:18px; color:var(--muted); font-size:12px; text-align:center; }
+
+    /* responsive */
+    @media (max-width:920px){
+      .grid{ grid-template-columns: 1fr; }
+      .chart{ height:320px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="kpi-row">
-      <div class="kpi">
-        <h3>Order booking</h3>
-        <div class="value" id="kpi-booking">186</div>
-        <div class="sub">Total orders booked</div>
+    <header>
+      <div>
+        <h1>OFE Performance KPI Dashboard (2022–2026)</h1>
+        <div class="meta">Prepared by: Operations Planning & Control · Period: 2025–2026 · Theme: Modern Teal & White</div>
       </div>
-
-      <div class="kpi">
-        <h3>Completion</h3>
-        <div class="value" id="kpi-completion">124</div>
-        <div class="sub">Total completed</div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:var(--muted)">Interactive dashboard</div>
+        <div style="font-weight:700;color:var(--teal-strong);font-size:18px;margin-top:6px;">Unit: ₹ (Cr)</div>
       </div>
+    </header>
 
-      <div class="kpi">
-        <h3>Pending / Potential</h3>
-        <div class="value" id="kpi-pending">62</div>
-        <div class="sub">Remaining to match</div>
+    <!-- KPI Cards -->
+    <section class="kpi-row">
+      <div class="kpi" id="kpi-totalvalue">
+        <div class="label">Total Value (All Sections)</div>
+        <div class="value" id="totalValue">— Cr</div>
+        <div class="small">Pending Value (Types): <span id="pendingValueTypes">— Cr</span></div>
       </div>
-    </div>
+      <div class="kpi" id="kpi-pendqty">
+        <div class="label">Total Pending Quantity</div>
+        <div class="value" id="pendQty">—</div>
+        <div class="small">Grand Total Qty across types</div>
+      </div>
+      <div class="kpi" id="kpi-shop">
+        <div class="label">Shop Completion</div>
+        <div class="value" id="shopComp">—%</div>
+        <div class="small" id="shopCompDetail">—</div>
+      </div>
+      <div class="kpi" id="kpi-pdo">
+        <div class="label">PDO1 vs Ward 35 (Latest)</div>
+        <div class="value" id="pdoRatio">—</div>
+        <div class="small" id="pdoDetail">—</div>
+      </div>
+    </section>
 
-    <div class="grid">
+    <!-- Charts grid -->
+    <section class="grid">
+      <!-- Vendor stacked bar -->
       <div class="card">
-        <h4>Monthwise turnover completion</h4>
-        <canvas id="completionChart" height="140"></canvas>
+        <h3>Vendor-Wise Distribution (CSG HD / SPL / TBG SPL)</h3>
+        <div id="vendorChart" class="chart"></div>
+        <div class="table-wrap">
+          <table id="vendorTable">
+            <thead><tr><th>Vendor</th><th>4M37</th><th>4M38</th><th>4M39</th><th>4M41</th><th>4M32</th><th>4M36</th><th>4M10</th><th>Total</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
+      <!-- Pending value pie + bar -->
       <div class="card">
-        <h4>Monthwise order booking</h4>
-        <canvas id="bookingChart" height="140"></canvas>
+        <h3>Pending Value by Type (Pareto)</h3>
+        <div id="pendingPie" class="chart" style="height:300px"></div>
+        <div id="pendingBar" class="chart" style="height:260px"></div>
+        <div class="table-wrap">
+          <table id="pendingTable">
+            <thead><tr><th>Type</th><th>Pending Qty</th><th>Value (Cr)</th><th>% of Pend Val</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
+      <!-- PDO Trend -->
       <div class="card">
-        <h4>Region-wise order booking (map)</h4>
-        <div id="map"></div>
+        <h3>PDO Trend Analysis (2022–2025)</h3>
+        <div id="pdoChart" class="chart"></div>
+        <div class="table-wrap">
+          <table id="pdoTable">
+            <thead><tr><th>Year</th><th>Ward 35</th><th>PDO1</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="insight" id="pdoInsight"></div>
       </div>
 
+      <!-- CF / SC / Shop -->
       <div class="card">
-        <h4>Pending order breakup (pie)</h4>
-        <canvas id="pendingPie" height="220"></canvas>
+        <h3>CF / SC Matching & Shop Completion</h3>
+        <div id="cfChart" class="chart" style="height:230px"></div>
+        <div id="scChart" class="chart" style="height:230px"></div>
+        <div class="table-wrap">
+          <table id="cfTable"><thead><tr><th>Category</th><th>List Value</th><th>CF Matching</th></tr></thead><tbody></tbody></table>
+          <table id="scTable" style="margin-top:8px;"><thead><tr><th>Category</th><th>List Value</th><th>SC Matching</th></tr></thead><tbody></tbody></table>
+          <table id="shopTable" style="margin-top:8px;"><thead><tr><th>Category</th><th>Target</th><th>Completion</th></tr></thead><tbody></tbody></table>
+        </div>
       </div>
 
-      <div class="card" style="grid-column:1 / -1;">
-        <h4>C&F, Subcontracting, and Shop matching (grouped bar)</h4>
-        <canvas id="matchingBar" height="120"></canvas>
+      <!-- Monthly distribution + cumulative -->
+      <div class="card fullwidth">
+        <h3>Monthly Value Distribution (2025 vs 2026) with Cumulative Trend</h3>
+        <div id="monthlyCombo" class="chart" style="height:420px"></div>
+        <div class="table-wrap">
+          <table id="monthlyTable"><thead><tr><th>Month</th><th>2025 (Cr)</th><th>2026 (Cr)</th><th>Grand Total (Cr)</th></tr></thead><tbody></tbody></table>
+        </div>
       </div>
-    </div>
+
+    </section>
 
     <footer>
-      Generated from provided KPI data — interactive charts (Chart.js) and map (Leaflet). Hover charts for details.
+      <div>Generated for Operations Planning & Control — OFE Performance KPI Dashboard</div>
     </footer>
   </div>
 
-  <script>
-    // ---------- Data from the user (hard-coded) ----------
-    const kpi = {
-      booking: 186,
-      completion: 124,
-      pending: 62
+<script>
+/* -------------------------
+   Data (values in original rupees)
+   We'll convert to Crore (Cr) by dividing by 1e7
+   ------------------------- */
+(function(){
+  // Helper: format number as Crore with 2 decimals
+  function cr(n){ return (n/1e7).toFixed(2); }
+  function crLabel(n){ return cr(n) + " Cr"; }
+  function num(n){ return Number(n) || 0; }
+
+  // --- Vendor Data ---
+  const vendorRows = [
+    // Name, 4M37,4M38,4M39,4M41,4M32,4M36,4M10
+    ["MFPL", 30,0,0,17,5,0,61],
+    ["VEA", 0,26,0,0,0,10,64],
+    ["MSI", 3,1,0,7,0,6,2],
+    ["BSA", 7,0,0,0,2,2,0],
+    ["CSA", 0,0,1,2,2,3,2],
+    ["SSI", 1,0,0,2,0,6,0],
+    ["SKA", 0,0,0,6,1,0,0]
+  ];
+  // fill vendor table
+  const vendorTbody = document.querySelector("#vendorTable tbody");
+  vendorRows.forEach(r=>{
+    const total = r.slice(1).reduce((a,b)=>a+b,0);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td><td><strong>${total}</strong></td>`;
+    vendorTbody.appendChild(tr);
+  });
+
+  // --- Pending Value by Type (from your table) ---
+  const pending = [
+    {type:"FBV", qty:443, val:18.98, pct:27.26},
+    {type:"XMT", qty:116, val:13.07, pct:18.77},
+    {type:"3CP", qty:61, val:9.64, pct:13.84},
+    {type:"TSU", qty:49, val:9.36, pct:13.45},
+    {type:"2CP", qty:90, val:7.89, pct:11.33},
+    {type:"4CP", qty:12, val:5.51, pct:7.92},
+    {type:"MISC", qty:581, val:4.31, pct:6.19},
+    {type:"SD spare", qty:4621, val:0.85, pct:1.22},
+    {type:"SC spare", qty:68, val:0.02, pct:0.03}
+  ];
+  // table
+  const pendingTbody = document.querySelector("#pendingTable tbody");
+  pending.forEach(p=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${p.type}</td><td>${p.qty.toLocaleString()}</td><td>${p.val.toFixed(2)}</td><td>${p.pct.toFixed(2)}%</td>`;
+    pendingTbody.appendChild(tr);
+  });
+
+  // KPI values from pending
+  const totalPendingValue = pending.reduce((s,p)=>s+p.val,0); // in Crs
+  const totalPendingQty = pending.reduce((s,p)=>s+p.qty,0);
+  document.getElementById("totalValue").innerText = totalPendingValue.toFixed(2) + " Cr";
+  document.getElementById("pendQty").innerText = totalPendingQty.toLocaleString();
+
+  // --- PDO data ---
+  const pdo = [
+    {year:2022, ward35:398, pdo1:321},
+    {year:2023, ward35:623, pdo1:684},
+    {year:2024, ward35:323, pdo1:706},
+    {year:2025, ward35:128, pdo1:1001},
+  ];
+  const pdoTbody = document.querySelector("#pdoTable tbody");
+  pdo.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.year}</td><td>${r.ward35}</td><td>${r.pdo1}</td>`;
+    pdoTbody.appendChild(tr);
+  });
+
+  // set PDO KPI: show latest PDO1 and Ward 35 ratio
+  const latest = pdo[pdo.length-1];
+  const ratio = (latest.pdo1 / Math.max(1, latest.ward35)).toFixed(2);
+  document.getElementById("pdoRatio").innerText = `${cr(latest.pdo1*1e5)} Cr (PDO1)`; // scaled display (just indicative)
+  // Better summary:
+  document.getElementById("pdoDetail").innerText = `Latest: PDO1=${latest.pdo1}, Ward35=${latest.ward35} — PDO1 surged sharply vs Ward35`;
+
+  // --- CF / SC / Shop data ---
+  const cf = [
+    {cat:"Opening Match", list:38, match:38},
+    {cat:"LIST-1", list:23, match:22},
+    {cat:"LIST-2", list:35, match:35},
+    {cat:"LIST-3", list:37, match:33},
+    {cat:"LIST-4 (OIL)", list:9, match:2},
+    {cat:"LIST-5 (New booking)", list:44, match:32}
+  ];
+  const sc = [
+    {cat:"Opening Match", list:10, match:10},
+    {cat:"LIST-1", list:50, match:50},
+    {cat:"LIST-2", list:40, match:40},
+    {cat:"LIST-3", list:33, match:30},
+    {cat:"LIST-4 (OIL)", list:9, match:0},
+    {cat:"LIST-5 (New booking)", list:44, match:2}
+  ];
+  const shop = {cat:"Shop completion", target:186, completion:124};
+
+  // fill CF/SC/Shop tables
+  const cfTbody = document.querySelector("#cfTable tbody");
+  cf.forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.cat}</td><td>${r.list}</td><td>${r.match}</td>`; cfTbody.appendChild(tr); });
+  const scTbody = document.querySelector("#scTable tbody");
+  sc.forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.cat}</td><td>${r.list}</td><td>${r.match}</td>`; scTbody.appendChild(tr); });
+  const shopTbody = document.querySelector("#shopTable tbody");
+  shopTbody.innerHTML = `<tr><td>${shop.cat}</td><td>${shop.target}</td><td>${shop.completion}</td></tr>`;
+  // shop KPI
+  const shopPct = (shop.completion / shop.target * 100).toFixed(1);
+  document.getElementById("shopComp").innerText = shopPct + "%";
+  document.getElementById("shopCompDetail").innerText = `Completion: ${shop.completion} / Target: ${shop.target} (Balance ${shop.target - shop.completion})`;
+
+  // --- Monthly data (rupees) as provided; we'll convert to Cr
+  const monthlyRaw = [
+    {m:"Jan", v2025:1823450, v2026:0},
+    {m:"Feb", v2025:63187274, v2026:0},
+    {m:"Mar", v2025:57258782, v2026:0},
+    {m:"Apr", v2025:86077747, v2026:0},
+    {m:"May", v2025:229303974, v2026:0},
+    {m:"Jun", v2025:15778766, v2026:0},
+    {m:"Jul", v2025:14092891, v2026:0},
+    {m:"Aug", v2025:856300, v2026:5524911},
+    {m:"Sep", v2025:176260, v2026:3818340},
+    {m:"Oct", v2025:778561, v2026:2545560},
+    {m:"Nov", v2025:88483894, v2026:0},
+    {m:"Dec", v2025:75034447, v2026:0}
+  ];
+  // fill monthly table
+  const monthlyTbody = document.querySelector("#monthlyTable tbody");
+  monthlyRaw.forEach(r=>{
+    const grand = r.v2025 + r.v2026;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.m}</td><td>${cr(r.v2025)}</td><td>${cr(r.v2026)}</td><td>${cr(grand)}</td>`;
+    monthlyTbody.appendChild(tr);
+  });
+
+  // -------------------
+  // Plotly charts
+  // -------------------
+
+  // Vendor stacked bar
+  const vendors = vendorRows.map(r=>r[0]);
+  const groups = ["4M37","4M38","4M39","4M41","4M32","4M36","4M10"];
+  const tracesVendor = groups.map((g, idx)=>{
+    return {
+      x: vendors,
+      y: vendorRows.map(r=>r[idx+1]),
+      name: g,
+      type: 'bar'
     };
+  });
+  Plotly.newPlot('vendorChart', tracesVendor, {
+    barmode:'stack',
+    title: {text:"Vendor-wise Distribution (units by group)", font:{color: 'var(--teal-strong)'}},
+    legend:{orientation:'h', x:0, y:1.15}
+  }, {responsive:true});
 
-    const months = ["Apr'25","May'25","Jun'25","Jul'25","Aug'25","Sep'25","Oct'25"];
-    const turnoverCompletion = [20,20,20,20,20,20,4]; // "Turnover completion"
-    const orderBooking =       [20,20,30,50,20,20,4]; // "Order booking"
+  // Pending pie and bar
+  const pendingTypes = pending.map(p=>p.type);
+  const pendingVals = pending.map(p=>p.val);
+  const pendingPct = pending.map(p=>p.pct);
+  Plotly.newPlot('pendingPie',[{
+    values: pendingPct,
+    labels: pendingTypes,
+    type:'pie',
+    textinfo:'label+percent',
+    hovertemplate: '%{label}<br>Value: %{value:.2f}%' 
+  }], {title:{text:"% Contribution to Pending Value (by Type)"}},{responsive:true});
 
-    // Region-wise order booking (value)
-    // Approx lat/lon used for display
-    const regions = [
-      {name:'Mumbai', value:10, lat:19.0760, lon:72.8777},
-      {name:'Mehsana', value:20, lat:23.5959, lon:72.3984},
-      {name:'Rajamundry', value:30, lat:16.9891, lon:81.7898},
-      {name:'Dehradun', value:40, lat:30.3165, lon:78.0322},
-      {name:'Cambay (Khambhat)', value:50, lat:22.3450, lon:72.6099}
-    ];
+  Plotly.newPlot('pendingBar',[{
+    x: pendingTypes,
+    y: pendingVals,
+    type:'bar',
+    text: pendingVals.map(v=>v.toFixed(2) + " Cr"),
+    textposition:'auto'
+  }], {title:{text:"Pending Value (Cr) by Type"}, yaxis:{title:'Value (Cr)'}},{responsive:true});
 
-    // Pending order breakup
-    const pendingBreakup = [
-      {label:'XMT', value:10},
-      {label:'2CP', value:10},
-      {label:'3CP', value:10},
-      {label:'4CP', value:10},
-      {label:'TSU', value:10},
-      {label:'CSU', value:20},
-      {label:'Spares', value:1}
-    ];
+  // PDO trend
+  Plotly.newPlot('pdoChart', [
+    { x: pdo.map(r=>r.year), y: pdo.map(r=>r.ward35), mode:'lines+markers', name:'Ward 35' },
+    { x: pdo.map(r=>r.year), y: pdo.map(r=>r.pdo1), mode:'lines+markers', name:'PDO1' }
+  ], {title:{text:'PDO Trend (2022–2025)'}, yaxis:{title:'Quantity'}},{responsive:true});
 
-    // C&F overall matching breakup
-    // Using columns: List Value, CF matching, CF to match (list taken from table)
-    const cfList = [
-      {cat:'Opening match', list:38.34, match:38.34, toMatch:0},
-      {cat:'LIST-1', list:23, match:22, toMatch:1},
-      {cat:'LIST-2', list:35, match:35, toMatch:0},
-      {cat:'LIST-3', list:37, match:33, toMatch:4},
-      {cat:'LIST-4 (OIL)', list:9, match:1.6, toMatch:7.4},
-      {cat:'LIST5', list:44, match:32, toMatch:12}
-    ];
+  // CF and SC charts (grouped bars)
+  Plotly.newPlot('cfChart', [
+    { x: cf.map(r=>r.cat), y: cf.map(r=>r.list), name:'List Value', type:'bar' },
+    { x: cf.map(r=>r.cat), y: cf.map(r=>r.match), name:'CF Matching', type:'bar' }
+  ], {barmode:'group', title:{text:'C&F Matching vs Order Booking'}, yaxis:{title:'Count'}},{responsive:true});
 
-    // Subcontracting matching breakup
-    // columns: List Value, SC matching, SC to match
-    const scList = [
-      {cat:'Opening match', list:10, match:10, toMatch:0},
-      {cat:'LIST-1', list:50, match:50, toMatch:0},
-      {cat:'LIST-2', list:40, match:40, toMatch:0},
-      {cat:'LIST-3', list:33, match:30, toMatch:3},
-      {cat:'LIST-4 (OIL)', list:9, match:0, toMatch:9},
-      {cat:'LIST5', list:44, match:2, toMatch:42}
-    ];
+  Plotly.newPlot('scChart', [
+    { x: sc.map(r=>r.cat), y: sc.map(r=>r.list), name:'List Value', type:'bar' },
+    { x: sc.map(r=>r.cat), y: sc.map(r=>r.match), name:'SC Matching', type:'bar' }
+  ], {barmode:'group', title:{text:'Subcontractor Matching vs Order Booking'}, yaxis:{title:'Count'}},{responsive:true});
 
-    // Shop completion (single row)
-    const shop = {target:186, completion:123.92, balance:62.08};
+  // Monthly stacked bars + cumulative line (values converted to Cr for plotting)
+  const months = monthlyRaw.map(r=>r.m);
+  const v2025_cr = monthlyRaw.map(r=>r.v2025/1e7);
+  const v2026_cr = monthlyRaw.map(r=>r.v2026/1e7);
+  const grand_cr = monthlyRaw.map(r=>(r.v2025 + r.v2026)/1e7);
+  const cumulative = grand_cr.reduce((acc, val, idx)=>{
+    if(idx===0) acc.push(val);
+    else acc.push(acc[idx-1]+val);
+    return acc;
+  },[]);
+  const monthlyTraces = [
+    { x: months, y: v2025_cr, name:'2025', type:'bar' },
+    { x: months, y: v2026_cr, name:'2026', type:'bar' },
+    { x: months, y: cumulative, name:'Cumulative (Cr)', type:'scatter', mode:'lines+markers', yaxis:'y2', marker:{color: '#00797d'} }
+  ];
+  const monthlyLayout = {
+    barmode:'stack',
+    title:{text:'Monthly Distribution (2025 vs 2026) with Cumulative Trend'},
+    yaxis:{title:'Monthly Value (Cr)'},
+    yaxis2:{title:'Cumulative (Cr)', overlaying:'y', side:'right'},
+    legend:{orientation:'h', x:0, y:1.15}
+  };
+  Plotly.newPlot('monthlyCombo', monthlyTraces, monthlyLayout, {responsive:true});
 
-    // ---------- Populate top KPI values ----------
-    document.getElementById('kpi-booking').textContent = kpi.booking;
-    document.getElementById('kpi-completion').textContent = kpi.completion;
-    document.getElementById('kpi-pending').textContent = kpi.pending;
+  // -----------------------
+  // small KPI: Total Value across sources
+  // For demonstration we show: pending-types total + monthly grand total (converted)
+  const monthlyGrandTotalRupees = monthlyRaw.reduce((s,r)=>s + r.v2025 + r.v2026, 0);
+  const monthlyGrandTotalCr = monthlyGrandTotalRupees / 1e7; // in Cr
+  // pending total already in Cr (from earlier)
+  const overallTotalCr = (totalPendingValue + monthlyGrandTotalCr); // NOTE: these are two related data sets; include both as example
+  document.getElementById("totalValue").innerText = overallTotalCr.toFixed(2) + " Cr";
+  document.getElementById("pendingValueTypes").innerText = totalPendingValue.toFixed(2) + " Cr";
 
-    // ---------- Chart: monthwise completion (area/line) ----------
-    const completionCtx = document.getElementById('completionChart').getContext('2d');
-    const completionChart = new Chart(completionCtx, {
-      type: 'line',
-      data: {
-        labels: months,
-        datasets:[
-          {
-            label: 'Turnover completion',
-            data: turnoverCompletion,
-            borderColor: 'rgba(96,165,250,1)',
-            backgroundColor: createGradient(completionCtx, 'rgba(96,165,250,0.35)', 'rgba(96,165,250,0.02)'),
-            tension: 0.3,
-            fill: true,
-            pointRadius:4,
-            pointBackgroundColor:'#60a5fa'
-          }
-        ]
-      },
-      options:{
-        responsive:true,
-        plugins:{
-          legend:{ display:false },
-          tooltip:{ mode:'index', intersect:false }
-        },
-        scales:{
-          x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1' } },
-          y:{ ticks:{ color:'#cbd5e1' }, beginAtZero:true }
-        }
-      }
-    });
+  // PDO insight text
+  const pdoGrowth = ((pdo[pdo.length-1].pdo1 - pdo[0].pdo1) / pdo[0].pdo1 * 100).toFixed(0);
+  document.getElementById("pdoInsight").innerText = `PDO1 increased from ${pdo[0].pdo1} to ${pdo[pdo.length-1].pdo1} (+${pdoGrowth}%) between 2022–2025; Ward 35 declined over same period.`;
 
-    // ---------- Chart: monthwise order booking (area/line) ----------
-    const bookingCtx = document.getElementById('bookingChart').getContext('2d');
-    const bookingChart = new Chart(bookingCtx, {
-      type: 'line',
-      data:{
-        labels: months,
-        datasets:[
-          {
-            label:'Order booking',
-            data: orderBooking,
-            borderColor: 'rgba(6,182,212,1)',
-            backgroundColor: createGradient(bookingCtx, 'rgba(6,182,212,0.35)', 'rgba(6,182,212,0.02)'),
-            tension:0.3,
-            fill:true,
-            pointRadius:4,
-            pointBackgroundColor:'#06b6d4'
-          }
-        ]
-      },
-      options:{
-        responsive:true,
-        plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } },
-        scales:{
-          x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1'} },
-          y:{ ticks:{ color:'#cbd5e1' }, beginAtZero:true }
-        }
-      }
-    });
+  // Optionally: Add ability to download charts as PNG using Plotly.toImage via browser
+  // (Plotly modebar also has camera icon to download images)
 
-    // helper gradient creator
-    function createGradient(ctx, topColor, bottomColor){
-      const canvas = ctx.canvas;
-      const g = ctx.createLinearGradient(0,0,0,canvas.height);
-      g.addColorStop(0, topColor);
-      g.addColorStop(1, bottomColor);
-      return g;
-    }
+  // Final adjustments: pending pareto sorted bar (desc by value)
+  // already plotted as given order; could sort if desired.
 
-    // ---------- Map: region-wise order booking ----------
-    const map = L.map('map', { zoomControl:true, scrollWheelZoom:false }).setView([22.0,78.0], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Add circle markers sized by value
-    const maxVal = Math.max(...regions.map(r=>r.value));
-    regions.forEach(r=>{
-      const radius = 12 + (r.value / maxVal) * 30; // visual sizing
-      const circle = L.circleMarker([r.lat,r.lon], {
-        radius,
-        fillColor: '#06b6d4',
-        color: '#0b1220',
-        weight: 1,
-        opacity: 0.9,
-        fillOpacity: 0.85
-      }).addTo(map);
-
-      circle.bindPopup(`<strong>${r.name}</strong><br/>Order booking: <b>${r.value}</b>`);
-      // add label permanently using a small custom div icon
-      const label = L.divIcon({
-        className: 'region-label',
-        html: `<div style="background:rgba(2,6,23,0.75);padding:4px 6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);font-size:12px;color:#e6eef8">${r.name}: ${r.value}</div>`
-      });
-      L.marker([r.lat + 0.15, r.lon], {icon: label, interactive:false}).addTo(map);
-    });
-
-    // ---------- Pie chart: pending order breakup ----------
-    const pendingCtx = document.getElementById('pendingPie').getContext('2d');
-    const pendingLabels = pendingBreakup.map(p => p.label);
-    const pendingValues = pendingBreakup.map(p => p.value);
-    const pendingColors = [
-      '#60a5fa','#06b6d4','#7c3aed','#f97316','#ef4444','#10b981','#fbbf24'
-    ];
-    const pendingPie = new Chart(pendingCtx, {
-      type:'pie',
-      data:{
-        labels: pendingLabels,
-        datasets:[{
-          data: pendingValues,
-          backgroundColor: pendingColors,
-          borderColor: '#071224',
-          borderWidth: 1
-        }]
-      },
-      options:{
-        plugins:{
-          legend:{ position:'right', labels:{ color:'#cbd5e1' } },
-          tooltip:{ callbacks:{
-            label: function(context){
-              const v = context.raw;
-              const total = pendingValues.reduce((a,b)=>a+b,0);
-              const pct = ((v/total)*100).toFixed(1);
-              return `${context.label}: ${v} (${pct}%)`;
-            }
-          }}
-        }
-      }
-    });
-
-    // ---------- Bar chart: C&F, Subcontracting, Shop matching ----------
-    const barCtx = document.getElementById('matchingBar').getContext('2d');
-
-    // for grouped bars, align categories. We'll use categories from CF and SC, plus "Shop"
-    const categories = Array.from(new Set([...cfList.map(x=>x.cat), ...scList.map(x=>x.cat)]));
-    categories.push('Shop completion');
-
-    const cfListValue = categories.map(cat => {
-      const item = cfList.find(x=>x.cat===cat);
-      return item ? item.list : 0;
-    });
-    const cfMatch = categories.map(cat => {
-      const item = cfList.find(x=>x.cat===cat);
-      return item ? item.match : 0;
-    });
-    const cfToMatch = categories.map(cat => {
-      const item = cfList.find(x=>x.cat===cat);
-      return item ? item.toMatch : 0;
-    });
-
-    const scListValue = categories.map(cat => {
-      const item = scList.find(x=>x.cat===cat);
-      return item ? item.list : 0;
-    });
-    const scMatch = categories.map(cat => {
-      const item = scList.find(x=>x.cat===cat);
-      return item ? item.match : 0;
-    });
-    const scToMatch = categories.map(cat => {
-      const item = scList.find(x=>x.cat===cat);
-      return item ? item.toMatch : 0;
-    });
-
-    // Add shop values at the "Shop completion" category index
-    const shopIndex = categories.indexOf('Shop completion');
-    // For clarity, create "Shop target / completion / balance" arrays in parallel length
-    const shopTarget = new Array(categories.length).fill(0);
-    const shopCompletion = new Array(categories.length).fill(0);
-    const shopBalance = new Array(categories.length).fill(0);
-    shopTarget[shopIndex] = shop.target;
-    shopCompletion[shopIndex] = shop.completion;
-    shopBalance[shopIndex] = shop.balance;
-
-    // We'll show grouped bars for: CF List vs CF Match vs CF toMatch (for CF categories)
-    // and SC List vs SC Match vs SC toMatch (for SC categories). For simplicity combine as pairs
-    // We'll present 6 datasets: CF list, CF match, CF toMatch, SC list, SC match, SC toMatch and Shop target/completion/balance.
-    const matchingBar = new Chart(barCtx, {
-      type:'bar',
-      data:{
-        labels: categories,
-        datasets: [
-          { label:'CF List', data: cfListValue, backgroundColor: 'rgba(96,165,250,0.85)' },
-          { label:'CF Match', data: cfMatch, backgroundColor: 'rgba(96,165,250,0.38)' },
-          { label:'CF To Match', data: cfToMatch, backgroundColor: 'rgba(96,165,250,0.18)' },
-
-          { label:'SC List', data: scListValue, backgroundColor: 'rgba(6,182,212,0.85)' },
-          { label:'SC Match', data: scMatch, backgroundColor: 'rgba(6,182,212,0.38)' },
-          { label:'SC To Match', data: scToMatch, backgroundColor: 'rgba(6,182,212,0.18)' },
-
-          { label:'Shop Target', data: shopTarget, backgroundColor: '#10b981' },
-          { label:'Shop Completion', data: shopCompletion, backgroundColor: '#34d399' },
-          { label:'Shop Balance', data: shopBalance, backgroundColor: '#065f46' }
-        ]
-      },
-      options:{
-        plugins:{
-          tooltip:{ mode:'index', intersect:false },
-          legend:{ position:'bottom', labels:{ color:'#cbd5e1' } }
-        },
-        responsive:true,
-        scales:{
-          x:{ stacked:false, ticks:{ color:'#cbd5e1' } },
-          y:{ beginAtZero:true, ticks:{ color:'#cbd5e1' } }
-        }
-      }
-    });
-
-    // Make charts resize nicely
-    window.addEventListener('resize', ()=>{
-      completionChart.resize();
-      bookingChart.resize();
-      pendingPie.resize();
-      matchingBar.resize();
-    });
-
-  </script>
+})(); // end IIFE
+</script>
 </body>
 </html>
-
